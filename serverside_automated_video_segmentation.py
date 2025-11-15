@@ -55,11 +55,9 @@ class DetectionResult:
 
 
 def get_device():
-    """Get the best available device (MPS for Mac, CUDA for NVIDIA, CPU otherwise)"""
+    """Get the best available device (CUDA for NVIDIA GPU, CPU otherwise)"""
     if torch.cuda.is_available():
         return "cuda"
-    elif torch.backends.mps.is_available():
-        return "mps"
     else:
         return "cpu"
 
