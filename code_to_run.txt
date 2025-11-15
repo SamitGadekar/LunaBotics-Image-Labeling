@@ -1,0 +1,35 @@
+-i/--input_dir (input directory, make before running)
+-o/--output_dir (output directory, make before running)
+-l/--labels (labels to run on, separate with spaces)
+
+
+FOR MAC:
+
+pip install -r requirements_mac.txt
+
+python auto_g-sam_mac.py \
+    -i ./sample_images \
+    -o ./sample_results \
+    -l rock
+
+python auto_g-sam_mac.py \
+    -i ./my_images \
+    -o ./results \
+    -l rock crater
+
+
+
+
+FOR CUDA/ELSE:
+
+pip install -r requirements.txt
+
+python auto_g-sam_mac.py \
+    -i ./sample_images \
+    -o ./sample_results \
+    -l rock
+
+python automated_grounded_sam.py \
+    --input_dir ./my_images \
+    --output_dir ./results \
+    --labels rock crater

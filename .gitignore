@@ -1,0 +1,13 @@
+# Image directories
+my_images/
+sample_images/
+sample_results*/
+*_results/
+results/
+output/
+
+# Python
+__pycache__/
+*.pyc
+.DS_Store
+.cache/
