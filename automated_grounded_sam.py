@@ -309,22 +309,46 @@ def process_all_directories(input_main_dir: str,
     # Get all subdirectories
     input_main_path = Path(input_main_dir)
     image_dirs = sorted([d for d in input_main_path.iterdir() if d.is_dir()])
+    total_images_here = len([f for f in input_main_path.iterdir() if f.suffix.lower() in image_extensions])
 
     print(f"\n{'='*70}")
-    print(f"FOUND {len(image_dirs)} DIRECTORIES TO PROCESS")
+    if (len(image_dirs) > 0):
+        print(f"FOUND {len(image_dirs)} DIRECTORIES TO PROCESS")
+    if (total_images_here > 0):
+        print(f"FOUND {total_images_here} IMAGES HERE TO PROCESS")
+    if (len(image_dirs) <= 0 & total_images_here <= 0):
+        print(f"NOTHING TO PROCESS")
     print(f"Labels: {labels}")
-    print(f"Device: {'cuda' if torch.cuda.is_available() else 'cpu'}")
+    print(f"Device: {str(get_device())}")
     print(f"{'='*70}")
 
+    try:
+        # Process current working directory
+        processed = process_directory(
+            input_dir=input_main_dir,
+            output_dir=output_main_dir,
+            labels=labels,
+            threshold=threshold,
+            polygon_refinement=polygon_refinement,
+            detector_id=detector_id,
+            segmenter_id=segmenter_id,
+            save_annotations=save_annotations,
+            save_metadata=save_metadata,
+            show_progress=show_progress
+        )
+        total_images_here = processed
+    except Exception as e:
+        print(f" x ERROR processing directory {Path(input_main_dir).name}: {str(e)}")
+
+
     total_images = 0
-    
     # Process each directory
     for idx, image_dir in enumerate(image_dirs, 1):
         try:
             input_dir = str(image_dir)
             output_dir = os.path.join(output_main_dir, f"annotated_{image_dir.name}")
 
-            print(f"[{idx}/{len(image_dirs)} directories]")
+            print(f"[Sub-directory {idx}/{len(image_dirs)}]")
             # Process the directory
             processed = process_directory(
                 input_dir=input_dir,
@@ -348,8 +372,10 @@ def process_all_directories(input_main_dir: str,
 
     print(f"{'='*70}")
     print(f"ALL PROCESSING COMPLETE")
-    print(f"Total directories: {len(image_dirs)}")
-    print(f"Total images processed: {total_images}")
+    print(f"Input location: {input_main_dir}")
+    print(f"Total sub-directories processed: {len(image_dirs)}")
+    print(f"Total images processed in  sub-directories: {total_images}")
+    print(f"Total images processed in   this directory: {total_images_here}")
     print(f"Output location: {output_main_dir}")
     print(f"{'='*70}\n")
     
@@ -421,18 +447,6 @@ def main():
     process_all_directories(
         input_main_dir=args.input_dir,
         output_main_dir=args.output_dir,
-        labels=args.labels,
-        threshold=args.threshold,
-        polygon_refinement=not args.no_polygon_refinement,
-        detector_id=args.detector_id,
-        segmenter_id=args.segmenter_id,
-        save_annotations=not args.no_annotations,
-        save_metadata=not args.no_metadata,
-        show_progress=not args.no_progress
-    )
-    process_directory(
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
         labels=args.labels,
         threshold=args.threshold,
         polygon_refinement=not args.no_polygon_refinement,
