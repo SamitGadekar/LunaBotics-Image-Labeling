@@ -245,7 +245,7 @@ def process_directory(input_dir: str,
     """Process all images in a directory"""
     
     if image_extensions is None:
-        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']
+        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif']
     
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
@@ -301,7 +301,7 @@ def process_all_directories(input_main_dir: str,
     """
 
     if image_extensions is None:
-        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']
+        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif']
 
     # Create output directory
     os.makedirs(output_main_dir, exist_ok=True)
