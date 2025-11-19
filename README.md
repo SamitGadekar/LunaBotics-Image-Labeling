@@ -1,117 +1,129 @@
 # LunaBotics Image Labeling
 
-Automated image segmentation using Grounding DINO + SAM (Segment Anything Model) for detecting and segmenting objects in images.
+Automated image segmentation using Grounding DINO + SAM (Segment Anything Model) for detecting and segmenting objects in images. Supports both single directory and batch multi-directory processing.
 
 ## Features
 
-- 🚀 Automated batch processing of image directories
-- 🎯 Zero-shot object detection with custom labels
-- 🖼️ Segmentation masks with bounding boxes
-- 💾 JSON metadata export
-- 🍎 Apple Silicon (MPS) support for Mac
-- 🔥 CUDA support for NVIDIA GPUs
+- Automated batch processing of image directories
+- Multi-directory processing for large datasets
+- Zero-shot object detection with custom labels
+- Segmentation masks with bounding boxes
+- JSON metadata export with polygon coordinates
+- Apple Silicon (MPS) support for Mac
+- CUDA support for NVIDIA GPUs
 
 ## Requirements
 
-**For Mac (Apple Silicon M1/M2/M3):**
-- macOS 12.3+
 - Python 3.8+
-
-**For CUDA/Other Systems:**
-- Python 3.8+
-- NVIDIA GPU (optional, for CUDA acceleration)
 
 ## Installation
 
-### Mac (Apple Silicon)
 ```bash
-pip install -r requirements_mac.txt
+# For CUDA support (Linux/Windows with NVIDIA GPU)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
-
-### CUDA/Other Systems
 ```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Verify GPU access with this command:
+python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}'); print(f'MPS: {torch.backends.mps.is_available()}')"
 ```
 
 ## Usage
 
-### Command Line Arguments
+### Processing Multiple Directories
 
-| Argument | Short | Required | Description |
-|----------|-------|----------|-------------|
-| `--input_dir` | `-i` | Yes | Input directory containing images |
-| `--output_dir` | `-o` | Yes | Output directory for results |
-| `--labels` | `-l` | Yes | Space-separated labels to detect |
+Process all subdirectories containing images:
 
-**⚠️ Important:** Create input and output directories before running!
-
-### Mac Usage
-
-**Single label:**
 ```bash
-python auto_g-sam_mac.py \
-    -i ./sample_images \
-    -o ./sample_results \
-    -l rock
+python automated_grounded_sam.py \
+    -i ./input_main_directory \
+    -o ./output_main_directory \
+    -l rock puddle ...
 ```
 
-**Multiple labels:**
+**Directory Structure:**
+```
+input_main_directory/
+|–– rosbag_001/
+|   |–– frame_000001.png
+|   |–– frame_000002.png
+|   |–– ...
+|–– rosbag_002/
+|   |–– frame_000001.png
+|   |–– ...
+|–– rosbag_003/
+    |–– ...
+
+output_main_directory/
+|–– annotated_rosbag_001/
+|   |–– annotated_frame_000001.png
+|   |–– annotated_frame_000001.json
+|   |–– ...
+|–– annotated_rosbag_002/
+|–– annotated_rosbag_003/
+```
+
+### Processing Single Directory
+
+For processing images in a single directory, it's the same code!
+
 ```bash
-python auto_g-sam_mac.py \
-    -i ./my_images \
-    -o ./results \
+python automated_grounded_sam.py \
+    -i ./single_image_folder \
+    -o ./single_output_folder \
     -l rock crater
 ```
 
-### CUDA/Other Systems Usage
+### Command Line Arguments
 
-**Single label:**
+| Argument | Short | Required | Default | Description |
+|----------|-------|----------|---------|-------------|
+| `--input_dir` | `-i` | Yes | - | Input directory (single folder or parent of multiple folders) |
+| `--output_dir` | `-o` | Yes | - | Output directory for results |
+| `--labels` | `-l` | Yes | - | Space-separated labels to detect |
+| `--threshold` | `-t` | No | 0.3 | Detection confidence threshold (0.0-1.0) |
+| `--no_polygon_refinement` | - | No | False | Disable polygon refinement |
+| `--detector_id` | - | No | grounding-dino-tiny | Grounding DINO model variant |
+| `--segmenter_id` | - | No | sam-vit-base | SAM model variant |
+| `--no_annotations` | - | No | False | Don't save annotated images |
+| `--no_metadata` | - | No | False | Don't save JSON metadata |
+| `--no_progress` | - | No | False | Hide progress bars |
+
+## Examples
+
+### Base Usage
 ```bash
+# Process multiple rosbag directories
 python automated_grounded_sam.py \
-    --input_dir ./sample_images \
-    --output_dir ./sample_results \
-    --labels rock
+    -i ./rosbags \
+    -o ./annotated_rosbags \
+    -l rock crater
 ```
 
-**Multiple labels:**
+### Custom Threshold + Metadata Only + Hide Progress Bars
 ```bash
+# Lower threshold to detect more objects (may include false positives)
 python automated_grounded_sam.py \
-    --input_dir ./my_images \
-    --output_dir ./results \
-    --labels rock crater
+    -i ./images \
+    -o ./results \
+    -l rock \
+    -t 0.2 \
+    --no_annotations \
+    --no_progress
 ```
 
-## Quick Start
+## Output Format
 
-```bash
-# 1. Create directories
-mkdir -p input_images output_results
+### Annotated Images (.png files)
+- Bounding boxes with labels and confidence scores
+- Segmentation mask contours
+- Random colors for each detection
 
-# 2. Add your images to input_images/
+### JSON Metadata
+Each annotated image has a corresponding JSON file:
 
-# 3. Run segmentation (Mac)
-python auto_g-sam_mac.py -i ./input_images -o ./output_results -l rock crater
-
-# 4. Check results in output_results/
-```
-
-## Output
-
-For each input image, the script generates:
-
-1. **Annotated image** - Original image with bounding boxes and segmentation masks
-2. **JSON metadata** - Detection results with labels, confidence scores, and coordinates
-
-### Example Output Structure
-```
-output_results/
-├── annotated_image1.png
-├── annotated_image1.json
-├── annotated_image2.png
-└── annotated_image2.json
-```
-
-### Example JSON
 ```json
 [
   {
@@ -123,86 +135,107 @@ output_results/
       "xmax": 300,
       "ymax": 400
     },
-    "polygon": [[100, 150], [120, 145], ...]
+    "polygon": [
+      [100, 150],
+      [120, 145],
+      [135, 148],
+      ...
+    ]
   }
 ]
 ```
 
-## Examples
+## Output Example
 
-### Detect rocks
-```bash
-python auto_g-sam_mac.py -i ./images -o ./results -l rock
 ```
+======================================================================
+FOUND 1 DIRECTORIES TO PROCESS
+FOUND 2 IMAGES HERE TO PROCESS
+Labels: ['rock']
+Device: mps
+======================================================================
+Processing: sample_images (2 images)
+ Processing sample_images:   0%|                                            | 0/2 [00:00<?, ?it/s]
+ Processing sample_images:  50%|██████████████████                  | 1/2 [00:09<00:09,  9.57s/it]
+ V COMPLETED: sample_images (2 images processed)
 
-### Detect multiple objects
-```bash
-python auto_g-sam_mac.py -i ./images -o ./results -l rock crater boulder
-```
+[Sub-directory 1/1]
+Processing: Group_1 (2 images)
+ Processing Group_1:   0%|                                                  | 0/2 [00:00<?, ?it/s]
+ Processing Group_1:  50%|█████████████████████                     | 1/2 [00:06<00:06,  6.34s/it]
+ V COMPLETED: Group_1 (2 images processed)
 
-### Custom threshold
-```bash
-python auto_g-sam_mac.py -i ./images -o ./results -l rock --threshold 0.4
+======================================================================
+ALL PROCESSING COMPLETE
+Input location: ./sample_images
+Total sub-directories processed: 1
+Total images processed in  sub-directories: 2
+Total images processed in   this directory: 2
+Output location: ./sample_results
+======================================================================
 ```
 
 ## Processing Video Frames
 
-Extract frames from video first:
-
-```bash
-# Install FFmpeg (Mac)
-brew install ffmpeg
-
-# Extract frames
-mkdir video_frames
-ffmpeg -i video.mp4 video_frames/frame_%04d.png
-
-# Run segmentation
-python auto_g-sam_mac.py -i ./video_frames -o ./video_results -l rock crater
-```
+// TODO
 
 ## Troubleshooting
 
-### Mac: "Device: cpu" instead of "Device: mps"
+### GPU Not Being Used
 
-Check MPS availability:
+**Check GPU availability:**
 ```bash
-python -c "import torch; print(f'MPS available: {torch.backends.mps.is_available()}')"
+python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
 ```
 
-Reinstall PyTorch with MPS support:
+**For Mac:**
+```bash
+python -c "import torch; print(f'MPS: {torch.backends.mps.is_available()}')"
+```
+
+**Reinstall PyTorch with CUDA:**
 ```bash
 pip uninstall torch torchvision torchaudio
-pip install torch torchvision torchaudio
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 
 ### Out of Memory
 
-Process smaller batches or reduce image resolution before processing.
+- Process fewer images at once
+- Use smaller model: `--detector_id "IDEA-Research/grounding-dino-tiny"`
+- Reduce image resolution before processing
+- Clear GPU cache: `python -c "import torch; torch.cuda.empty_cache()"`
 
 ### No Detections Found
 
-- Lower the threshold: `--threshold 0.2`
-- Verify labels match objects in images
-- Check that images loaded correctly
+- Lower threshold: `-t 0.2` or `-t 0.15`
+- Check labels match objects in images
+- Try different label variations (e.g., "rock" vs "stone")
+- Verify images are loading correctly
 
-## Performance
+### Slow Processing
 
-**Mac (M1/M2/M3 with MPS):**
-- ~3-5 seconds per image
-
-**NVIDIA GPU (CUDA):**
-- ~2-4 seconds per image
-
-**CPU:**
-- ~10-20 seconds per image
+- Verify GPU is active: `nvidia-smi` (for CUDA) or Activity Monitor -> GPU (for Mac)
+- Use tiny model variant: `--detector_id "IDEA-Research/grounding-dino-tiny"`
+- Check for background processes using GPU
 
 ## Supported Image Formats
 
-- PNG
-- JPG/JPEG
-- BMP
-- TIFF
+- PNG (.png)
+- JPEG (.jpg, .jpeg)
+- BMP (.bmp)
+- TIFF (.tiff, .tif)
+
+## Model Information
+
+### Grounding DINO
+- **Tiny**: Fast, less accurate (`IDEA-Research/grounding-dino-tiny`)
+- **Base**: Balanced (default, `IDEA-Research/grounding-dino-base`)
+
+### Segment Anything (SAM)
+- **ViT-Base**: Balanced (default, `facebook/sam-vit-base`)
+- **ViT-Large**: More accurate, slower (`facebook/sam-vit-large`)
+- **ViT-Huge**: Best accuracy, slowest (`facebook/sam-vit-huge`)
 
 ## License
 
@@ -216,20 +249,24 @@ Issues and pull requests welcome!
 
 ## Citation
 
-If you use this tool, please cite the original papers:
+If you use this tool in research, please cite:
 
 ```bibtex
 @article{liu2023grounding,
   title={Grounding dino: Marrying dino with grounded pre-training for open-set object detection},
-  author={Liu, Shilong and others},
+  author={Liu, Shilong and Zeng, Zhaoyang and Ren, Tianhe and Li, Feng and Zhang, Hao and Yang, Jie and Li, Chunyuan and Yang, Jianwei and Su, Hang and Zhu, Jun and others},
   journal={arXiv preprint arXiv:2303.05499},
   year={2023}
 }
 
 @article{kirillov2023segment,
   title={Segment anything},
-  author={Kirillov, Alexander and others},
+  author={Kirillov, Alexander and Mintun, Eric and Ravi, Nikhila and Mao, Hanzi and Rolland, Chloe and Gustafson, Laura and Xiao, Tete and Whitehead, Spencer and Berg, Alexander C and Lo, Wan-Yen and others},
   journal={arXiv preprint arXiv:2304.02643},
   year={2023}
 }
 ```
+
+## Contact
+
+For issues or questions, please open an issue on GitHub.
