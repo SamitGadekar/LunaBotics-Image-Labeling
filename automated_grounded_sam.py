@@ -19,6 +19,9 @@ from PIL import Image
 from tqdm import tqdm
 from transformers import AutoModelForMaskGeneration, AutoProcessor, pipeline
 
+# open to change?
+ROCK_CONFIDENCE_THRESHOLD = .5
+CRATER_CONFIDENCE_THRESHOLD = .3
 
 @dataclass
 class BoundingBox:
@@ -213,6 +216,15 @@ def save_results(image_array: np.ndarray,
         metadata_path = output_path.replace('.png', '.json').replace('.jpg', '.json')
         metadata = []
         for det in detections:
+
+            # the labels themselves will change, will be updated to use passed prompts as checks
+            # or pass in the wanted confident lvls for each prompt, and check
+            # for now, here's a rlly simple implementation of filtering by interval ig
+            if (det.label == 'rock' and score < ROCK_CONFIDENCE_THRESHOLD) :
+                continue
+            if (det.label == 'crater' and score < CRATER_CONFIDENCE_THRESHOLD) :
+                continue
+
             det_dict = {
                 'label': det.label,
                 'score': float(det.score),
