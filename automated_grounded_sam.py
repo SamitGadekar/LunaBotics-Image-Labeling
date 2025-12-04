@@ -19,9 +19,6 @@ from PIL import Image
 from tqdm import tqdm
 from transformers import AutoModelForMaskGeneration, AutoProcessor, pipeline
 
-# open to change?
-ROCK_CONFIDENCE_THRESHOLD = .5
-CRATER_CONFIDENCE_THRESHOLD = .3
 
 @dataclass
 class BoundingBox:
@@ -203,7 +200,8 @@ def save_results(image_array: np.ndarray,
                 detections: List[DetectionResult],
                 output_path: str,
                 save_annotations: bool = True,
-                save_metadata: bool = True):
+                save_metadata: bool = True,
+                label_thresholds=None):
     """Save annotated image and metadata"""
     # Save annotated image
     if save_annotations:
@@ -217,13 +215,9 @@ def save_results(image_array: np.ndarray,
         metadata = []
         for det in detections:
 
-            # the labels themselves will change, will be updated to use passed prompts as checks
-            # or pass in the wanted confident lvls for each prompt, and check
-            # for now, here's a rlly simple implementation of filtering by interval ig
-            if (det.label == 'rock' and score < ROCK_CONFIDENCE_THRESHOLD) :
-                continue
-            if (det.label == 'crater' and score < CRATER_CONFIDENCE_THRESHOLD) :
-                continue
+            if label_thresholds is not None and det.label in label_thresholds:
+                if det.score < label_thresholds[det.label]:
+                    continue
 
             det_dict = {
                 'label': det.label,
@@ -252,8 +246,9 @@ def process_directory(input_dir: str,
                      segmenter_id: str = "facebook/sam-vit-base",
                      save_annotations: bool = True,
                      save_metadata: bool = True,
-                     image_extensions: List[str] = None,
-                     show_progress: bool = False):
+                     image_extensions: Optional[List[str]] = None,
+                     show_progress: bool = False,
+                     label_thresholds: Optional[Dict[str, float]] = None):
     """Process all images in a directory"""
     
     if image_extensions is None:
@@ -285,7 +280,7 @@ def process_directory(input_dir: str,
             # Save results
             output_path = os.path.join(output_dir, f"annotated_{image_file.name}")
             save_results(image_array, detections, output_path, 
-                        save_annotations, save_metadata)
+                        save_annotations, save_metadata, label_thresholds)
 
         except Exception as e:
             print(f" x Error processing {image_file.name}: {str(e)}")
@@ -304,8 +299,9 @@ def process_all_directories(input_main_dir: str,
                             segmenter_id: str = "facebook/sam-vit-base",
                             save_annotations: bool = True,
                             save_metadata: bool = True,
-                            image_extensions: List[str] = None,
-                            show_progress=True):
+                            image_extensions: Optional[List[str]] = None,
+                            show_progress=True,
+                            label_thresholds: Optional[Dict[str, float]] = None):
     """
     Process all rosbag directories.
     Takes the path to an input directory which contains
@@ -346,7 +342,8 @@ def process_all_directories(input_main_dir: str,
             segmenter_id=segmenter_id,
             save_annotations=save_annotations,
             save_metadata=save_metadata,
-            show_progress=show_progress
+            show_progress=show_progress,
+            label_thresholds=label_thresholds
         )
         total_images_here = processed
     except Exception as e:
@@ -373,7 +370,8 @@ def process_all_directories(input_main_dir: str,
                 save_annotations=save_annotations,
                 save_metadata=save_metadata,
                 image_extensions=image_extensions,
-                show_progress=show_progress
+                show_progress=show_progress,
+                label_thresholds=label_thresholds
             )
 
             total_images += processed
@@ -391,6 +389,17 @@ def process_all_directories(input_main_dir: str,
     print(f"Output location: {output_main_dir}")
     print(f"{'='*70}\n")
     
+def label_scores_checker(input) :
+    if len(input) % 2 != 0:
+        raise argparse.ArgumentTypeError('Provide pairs: <label score>')
+    result = {}
+    for i in range(0, len(input), 2):
+        label = input[i]
+        score = float(input[i+1])
+        if (score < 0 or score > 1) :
+            raise argparse.ArgumentTypeError('Scores must be between 0 and 1.')
+        result[label] = score
+    return result   
 
 def main():
     parser = argparse.ArgumentParser(
@@ -409,11 +418,10 @@ def main():
         help="Output directory for results"
     )
     parser.add_argument(
-        "--labels", "-l",
-        type=str,
+        "--labels_scores", "-ls",
         nargs="+",
         required=True,
-        help="Labels to detect (e.g., cat dog person)"
+        help="Pairs of <label min-confidence-score>. Example: cat 0.3 dog 0.4"
     )
     parser.add_argument(
         "--threshold", "-t",
@@ -455,11 +463,14 @@ def main():
     )
     
     args = parser.parse_args()
+    label_thresholds = label_scores_checker(args.labels_scores)
+    labels = list(label_thresholds.keys())
     
     process_all_directories(
         input_main_dir=args.input_dir,
         output_main_dir=args.output_dir,
-        labels=args.labels,
+        labels=labels,
+        label_thresholds=label_thresholds,
         threshold=args.threshold,
         polygon_refinement=not args.no_polygon_refinement,
         detector_id=args.detector_id,
