@@ -1,0 +1,4 @@
+train: ../datasets/pothole_dataset_v8/train/images # change this once dataset is created
+val: ../datasets/pothole_dataset_v8/valid/images
+nc: 1
+names: ['rocks', 'craters']
