@@ -164,7 +164,7 @@ def main(year: int):
                 total_frames += frames_extracted + 1
 
 if __name__ == "__main__":
-    year = sys.argv[1]
+    year = int(sys.argv[1])
     
     main(year)
     
