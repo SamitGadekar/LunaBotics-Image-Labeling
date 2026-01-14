@@ -149,7 +149,7 @@ def main(year: int):
     "ucf_pits_driving_2024-05-12-10-22-01.bag"
 ]
     topic_names = ["/d455_front/camera/aligned_depth_to_color/image_raw", '/d455_front/camera/color/image_rect_color', "/d455_back/camera/aligned_depth_to_color/image_raw", '/d455_back/camera/color/image_rect_color'] if year == 2025 else ["/d455_back/camera/color/image_raw", "/d455_back/camera/aligned_depth_to_color/image_raw"]
-    output_dir = './frames'
+    output_dir = './outputs/frames' # let's keep all outputs to an output folder
     # The lines above should be handled by the command line arguments
     total_frames = 0
     
