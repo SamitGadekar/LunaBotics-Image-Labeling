@@ -1,5 +1,5 @@
 # INTALL REQUIREMENTS:
-pip install -r requirements_mac.txt
+pip install -r requirements.txt
 
 # BASE CODE
 python automated_grounded_sam.py -i ./input_dir -o ./output_dir -l my_label1 my_label2

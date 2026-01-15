@@ -12,5 +12,6 @@ __pycache__/
 .DS_Store
 .cache/
 
+venv
 # bag files
 *.bag
